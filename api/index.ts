@@ -26,52 +26,34 @@ const THEME = {
   },
 } as const
 
-interface Track {
-  name: string
-  artist: string
-  image: string
-}
-
-async function fetchTrack(): Promise<Track | null> {
+async function track() {
   const url = `${LASTFM_API}?method=user.getrecenttracks&user=${LASTFM_USER}&api_key=${LASTFM_API_KEY}&format=json&limit=1`
   const res = await fetch(url)
   if (!res.ok) return null
-
-  const track = (await res.json())?.recenttracks?.track?.[0]
-  if (!track) return null
-
+  const t = (await res.json())?.recenttracks?.track?.[0]
+  if (!t) return null
   return {
-    name: track.name ?? "Unknown",
-    artist: track.artist?.["#text"] ?? "Unknown",
-    image: track.image?.find((i: any) => i.size === "extralarge")?.["#text"] ?? "",
+    name: t.name ?? "Unknown",
+    artist: t.artist?.["#text"] ?? "Unknown",
+    image: t.image?.find((i: any) => i.size === "extralarge")?.["#text"] ?? "",
   }
 }
 
-async function loadCover(url: string): Promise<string> {
+async function cover(url: string) {
   if (!url) return PLACEHOLDER_COVER
-  try {
-    const res = await fetch(url)
-    if (!res.ok) return PLACEHOLDER_COVER
-    const b64 = Buffer.from(await res.arrayBuffer()).toString("base64")
-    return `data:image/jpeg;base64,${b64}`
-  } catch {
-    return PLACEHOLDER_COVER
-  }
+  return fetch(url)
+    .then(res => res.ok ? res.arrayBuffer() : Promise.reject())
+    .then(buf => `data:image/jpeg;base64,${Buffer.from(buf).toString("base64")}`)
+    .catch(() => PLACEHOLDER_COVER)
 }
 
-function eqBars(count = 8): string {
-  const bars = Array.from({ length: count }, (_, i) => {
-    const dur = 500 + Math.floor(Math.random() * 250)
-    return `<div style="width:4px;height:10px;border-radius:2px 2px 0 0;transform-origin:bottom;animation:r ${dur}ms -800ms ease-in-out infinite alternate;background:#1DB954${i > 0 ? ";margin-left:2px" : ""}"></div>`
-  }).join("")
-  return `<div style="display:flex;margin-top:5px;">${bars}</div>`
-}
+const equalizer = (n = 8) => `<div style="display:flex;margin-top:5px;">${
+  Array.from({ length: n }, (_, i) => `<div style="width:4px;height:10px;border-radius:2px 2px 0 0;transform-origin:bottom;animation:r ${500 + Math.floor(Math.random() * 250)}ms -800ms ease-in-out infinite alternate;background:#1DB954${i > 0 ? ";margin-left:2px" : ""}"></div>`).join("")}</div>`
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-}
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 
-function renderSvg(track: Track, cover: string, theme: "light" | "dark"): string {
+function renderSvg(track: { name: string; artist: string; image: string }, cover: string, theme: "light" | "dark") {
   const t = THEME[theme]
   return `<svg width="248" height="84" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <foreignObject width="248" height="84">
@@ -86,7 +68,7 @@ function renderSvg(track: Track, cover: string, theme: "light" | "dark"): string
 <span style="font-size:12px;font-weight:600;line-height:1.4;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:135px;color:${t.title};margin-left:5px;display:block;">${escapeHtml(track.name)}</span>
 </div>
 <span style="font-size:10px;font-weight:500;line-height:1.4;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:135px;color:${t.subtitle};margin-top:2px;display:block;">${escapeHtml(track.artist)}</span>
-${eqBars()}
+${equalizer()}
 </div>
 </div>
 </a>
@@ -95,18 +77,11 @@ ${eqBars()}
 </svg>`
 }
 
-const FALLBACK: Track = { name: "Not Playing", artist: "Spotify", image: "" }
-
 async function handler(req: Request): Promise<Response> {
-  const { pathname, searchParams } = new URL(req.url)
-
-  if (pathname === "/health") return new Response("OK")
-
-  const theme = searchParams.get("theme") === "dark" ? "dark" : "light"
-  const track = (await fetchTrack()) ?? FALLBACK
-  const cover = await loadCover(track.image)
-
-  return new Response(renderSvg(track, cover, theme), {
+  const theme = new URL(req.url).pathname === "/dark" ? "dark" : "light"
+  const t = (await track()) ?? { name: "Not Playing", artist: "Spotify", image: "" }
+  const c = await cover(t.image)
+  return new Response(renderSvg(t, c, theme), {
     headers: {
       "Content-Type": "image/svg+xml",
       "Cache-Control": "s-maxage=1",

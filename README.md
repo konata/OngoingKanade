@@ -6,7 +6,7 @@ A compact SVG widget that displays your currently playing track via [Last.fm](ht
 
 | Light | Dark |
 |-------|------|
-| ![light](https://ongoing-kanade.vercel.app/) | ![dark](https://ongoing-kanade.vercel.app/?theme=dark) |
+| ![light](https://ongoing-kanade.vercel.app/) | ![dark](https://ongoing-kanade.vercel.app/dark) |
 
 ## Usage
 
@@ -15,7 +15,7 @@ A compact SVG widget that displays your currently playing track via [Last.fm](ht
 <img src="https://ongoing-kanade.vercel.app/" width="240" alt="Now Playing" />
 
 <!-- Dark theme -->
-<img src="https://ongoing-kanade.vercel.app/?theme=dark" width="240" alt="Now Playing" />
+<img src="https://ongoing-kanade.vercel.app/dark" width="240" alt="Now Playing" />
 ```
 
 ## Deploy Your Own
@@ -36,14 +36,6 @@ cp .env.example .env  # fill in your credentials
 bun run dev
 # → http://localhost:8080
 ```
-
-## Stack
-
-Single file (`api/index.ts`, ~100 lines). No dependencies.
-
-- **Runtime:** Bun (local) / Vercel Edge Functions (production)
-- **Data:** Last.fm `user.getRecentTracks` API
-- **Output:** Inline SVG with embedded album art
 
 ## License
 
