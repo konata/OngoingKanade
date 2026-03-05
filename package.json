@@ -1,0 +1,6 @@
+{
+  "name": "ongoing-kanade",
+  "scripts": {
+    "dev": "bun run api/index.ts"
+  }
+}
